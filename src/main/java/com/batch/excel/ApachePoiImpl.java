@@ -2,17 +2,20 @@ package com.batch.excel;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class ApachePoiImpl {
 
+    private static final Logger logger = Logger.getLogger(ApachePoiImpl.class.getName());
+
     public static String generateExcel(List<Object[]> data, int rowAccessWindows) {
+        logger.info("Generating Excel...");
         Workbook workbook = new SXSSFWorkbook(rowAccessWindows);
-        Sheet sheet = workbook.createSheet("Person Details");
+        Sheet sheet = workbook.createSheet("sheet 1");
 
         Font headerFont = workbook.createFont();
         headerFont.setBold(true);
@@ -47,13 +50,16 @@ public class ApachePoiImpl {
             }
         }
 
+        logger.info("encode base64...");
         try (ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream()) {
             workbook.write(byteArrayOut);
             byte[] byteArray = byteArrayOut.toByteArray();
             String base64Encoded = Base64.getEncoder().encodeToString(byteArray);
             workbook.close();
+            logger.info("Excel generated...");
             return base64Encoded;
         } catch (IOException e) {
+            logger.severe("Error: " + e.getMessage());
             throw new RuntimeException(e);
         }
 

@@ -2,10 +2,14 @@ package com.batch.excel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class ObjectList {
 
+    private static final Logger logger = Logger.getLogger(ObjectList.class.getName());
+
     public List<Object[]> getObjectList(int listSize) {
+        logger.info("Generating list of size: " + listSize);
         List<Object[]> list = new ArrayList<>();
         int cont = 0;
         while (listSize > cont) {
