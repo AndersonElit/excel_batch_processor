@@ -2,6 +2,7 @@ package com.batch.excel;
 
 public class Request {
     private int listSize;
+    private int rowAccessWindows;
 
     public int getListSize() {
         return listSize;
@@ -9,5 +10,13 @@ public class Request {
 
     public void setListSize(int listSize) {
         this.listSize = listSize;
+    }
+
+    public int getRowAccessWindows() {
+        return rowAccessWindows;
+    }
+
+    public void setRowAccessWindows(int rowAccessWindows) {
+        this.rowAccessWindows = rowAccessWindows;
     }
 }

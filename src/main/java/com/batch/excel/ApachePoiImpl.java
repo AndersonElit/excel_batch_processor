@@ -10,8 +10,8 @@ import java.util.List;
 
 public class ApachePoiImpl {
 
-    public static String generateExcel(List<Object[]> data) {
-        Workbook workbook = new SXSSFWorkbook(100);
+    public static String generateExcel(List<Object[]> data, int rowAccessWindows) {
+        Workbook workbook = new SXSSFWorkbook(rowAccessWindows);
         Sheet sheet = workbook.createSheet("Person Details");
 
         Font headerFont = workbook.createFont();
