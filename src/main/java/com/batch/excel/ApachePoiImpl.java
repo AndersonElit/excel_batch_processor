@@ -86,9 +86,9 @@ public class ApachePoiImpl {
                     if (bytesRead > 0) {
                         String encodedChunk = encoder.encodeToString(Arrays.copyOf(buffer, bytesRead));
                         base64Builder.append(encodedChunk);
-                        System.gc();
                     }
                 }
+                base64Builder.trimToSize();
             }
             base64Content = base64Builder.toString();
             logger.info("File encoded to Base64.");
