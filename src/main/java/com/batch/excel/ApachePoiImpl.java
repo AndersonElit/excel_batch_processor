@@ -4,6 +4,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
@@ -59,9 +60,7 @@ public class ApachePoiImpl {
             logger.info("Excel file generated locally at " + filePath);
             logger.info("Encode file to base64...");
             File file = new File(filePath);
-            byte[] fileBytes = new byte[(int) file.length()];
-            FileInputStream fileInputStream = new FileInputStream(file);
-            fileInputStream.read(fileBytes);
+            byte[] fileBytes = Files.readAllBytes(file.toPath());
             String base64Encoded = Base64.getEncoder().encodeToString(fileBytes);
             logger.info("File encoded to Base64.");
             file.delete();
