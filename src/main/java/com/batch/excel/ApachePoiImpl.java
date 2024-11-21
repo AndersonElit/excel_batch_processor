@@ -60,39 +60,52 @@ public class ApachePoiImpl {
                     throw new RuntimeException(e);
                 }
             }
-
         }
 
         String filePath = "excelFile.xlsx";
         logger.info("Generating Excel file locally at " + filePath);
         String base64Content;
-        
+
         try (FileOutputStream fileOutputStream = new FileOutputStream(filePath);
              BufferedOutputStream bufferedOut = new BufferedOutputStream(fileOutputStream)) {
-            
+
             workbook.write(bufferedOut);
             workbook.close();
-            
+
             logger.info("Excel file generated locally at " + filePath);
             logger.info("Encode file to base64...");
 
-            StringBuilder base64Builder = new StringBuilder();
+            // Use 8KB buffer size for optimal performance
+            byte[] buffer = new byte[bytes];
+            File file = new File(filePath);
+            long fileSize = file.length();
+
+            // Pre-calculate base64 size to avoid StringBuilder resizing
+            int base64Size = (int)(fileSize * 1.4); // Base64 is roughly 4/3 of original size
+            StringBuilder base64Builder = new StringBuilder(base64Size);
+
             try (InputStream inputStream = new BufferedInputStream(new FileInputStream(filePath))) {
                 Base64.Encoder encoder = Base64.getEncoder();
-                byte[] buffer = new byte[bytes];
                 int bytesRead;
+                int totalBytesProcessed = 0;
 
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
                     if (bytesRead > 0) {
-                        String encodedChunk = encoder.encodeToString(Arrays.copyOf(buffer, bytesRead));
-                        base64Builder.append(encodedChunk);
+                        totalBytesProcessed += bytesRead;
+                        byte[] readData = bytesRead < buffer.length ?
+                                Arrays.copyOf(buffer, bytesRead) : buffer;
+                        base64Builder.append(encoder.encodeToString(readData));
+
+                        // Log progress for large files
+                        if (totalBytesProcessed > 1024 * 1024) { // Log every 1MB
+                            logger.info("Processed " + (totalBytesProcessed / (1024 * 1024)) + "MB");
+                        }
                     }
                 }
-                base64Builder.trimToSize();
             }
             base64Content = base64Builder.toString();
             logger.info("File encoded to Base64.");
-            
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -103,7 +116,7 @@ public class ApachePoiImpl {
         } catch (IOException e) {
             logger.warning("Could not delete temporary file: " + filePath + ". Error: " + e.getMessage());
         }
-        
+
         return base64Content;
     }
 }
