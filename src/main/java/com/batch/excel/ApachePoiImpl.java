@@ -35,6 +35,7 @@ public class ApachePoiImpl {
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
         cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
+        logger.info("Writing rows...");
         int rowNum = 0;
         for (Object[] rowData : data) {
             Row row = sheet.createRow(rowNum++);
