@@ -2,8 +2,8 @@ package com.batch.excel;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+
+import java.io.*;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
@@ -50,16 +50,24 @@ public class ApachePoiImpl {
             }
         }
 
-        logger.info("encode base64...");
-        try (ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream()) {
-            workbook.write(byteArrayOut);
-            byte[] byteArray = byteArrayOut.toByteArray();
-            String base64Encoded = Base64.getEncoder().encodeToString(byteArray);
+        String filePath = "excelFile.xlsx";
+        logger.info("Generating Excel file locally at " + filePath);
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream(filePath);
+            workbook.write(fileOutputStream);
             workbook.close();
-            logger.info("Excel generated...");
+            logger.info("Excel file generated locally at " + filePath);
+            logger.info("Encode file to base64...");
+            File file = new File(filePath);
+            byte[] fileBytes = new byte[(int) file.length()];
+            FileInputStream fileInputStream = new FileInputStream(file);
+            fileInputStream.read(fileBytes);
+            String base64Encoded = Base64.getEncoder().encodeToString(fileBytes);
+            logger.info("File encoded to Base64.");
+            file.delete();
+            logger.info("File deleted.");
             return base64Encoded;
-        } catch (IOException e) {
-            logger.severe("Error: " + e.getMessage());
+        }  catch (IOException e) {
             throw new RuntimeException(e);
         }
 
