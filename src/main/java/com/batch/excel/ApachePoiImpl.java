@@ -14,12 +14,39 @@ import java.util.logging.Logger;
 public class ApachePoiImpl {
 
     private static final Logger logger = Logger.getLogger(ApachePoiImpl.class.getName());
+    private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading// 1MB max for StringBuilder
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
         logger.info("Generating Excel...");
-        SXSSFWorkbook workbook = new SXSSFWorkbook(rowAccessWindows);
-        SXSSFSheet sheet = workbook.createSheet("sheet 1");
+        String filePath = "excelFile.xlsx";
+        
+        try (SXSSFWorkbook workbook = new SXSSFWorkbook(rowAccessWindows)) {
+            createExcelFile(workbook, data, rowAccessWindows, filePath);
+            return encodeFileToBase64(filePath, bytes);
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating Excel: " + e.getMessage(), e);
+        } finally {
+            deleteFile(filePath);
+        }
+    }
 
+    private static void createExcelFile(SXSSFWorkbook workbook, List<Object[]> data, int rowAccessWindows, String filePath) throws IOException {
+        SXSSFSheet sheet = workbook.createSheet("sheet 1");
+        
+        CellStyle headerStyle = createHeaderStyle(workbook);
+        CellStyle cellStyle = createCellStyle(workbook);
+
+        logger.info("Writing rows...");
+        writeDataToSheet(sheet, data, rowAccessWindows, headerStyle, cellStyle);
+
+        try (FileOutputStream fileOut = new FileOutputStream(filePath);
+             BufferedOutputStream bufferedOut = new BufferedOutputStream(fileOut)) {
+            workbook.write(bufferedOut);
+        }
+        logger.info("Excel file generated locally at " + filePath);
+    }
+
+    private static CellStyle createHeaderStyle(SXSSFWorkbook workbook) {
         Font headerFont = workbook.createFont();
         headerFont.setBold(true);
         headerFont.setColor(IndexedColors.WHITE.getIndex());
@@ -30,86 +57,71 @@ public class ApachePoiImpl {
         headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         headerStyle.setAlignment(HorizontalAlignment.CENTER);
         headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        return headerStyle;
+    }
 
+    private static CellStyle createCellStyle(SXSSFWorkbook workbook) {
         CellStyle cellStyle = workbook.createCellStyle();
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
         cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        return cellStyle;
+    }
 
-        logger.info("Writing rows...");
+    private static void writeDataToSheet(SXSSFSheet sheet, List<Object[]> data, int rowAccessWindows,
+                                       CellStyle headerStyle, CellStyle cellStyle) throws IOException {
         int rowNum = 0;
         for (Object[] rowData : data) {
             Row row = sheet.createRow(rowNum++);
-
             boolean isHeaderRow = rowNum == 1;
+            
             for (int colNum = 0; colNum < rowData.length; colNum++) {
                 Cell cell = row.createCell(colNum);
-                Object value = rowData[colNum];
-
-                cell.setCellValue((value.toString()));
-                if (isHeaderRow) {
-                    cell.setCellStyle(headerStyle);
-                } else {
-                    cell.setCellStyle(cellStyle);
-                }
+                cell.setCellValue(rowData[colNum].toString());
+                cell.setCellStyle(isHeaderRow ? headerStyle : cellStyle);
             }
 
             if (rowNum % rowAccessWindows == 0) {
-                try {
-                    sheet.flushRows(rowAccessWindows);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                sheet.flushRows(rowAccessWindows);
             }
         }
+    }
 
-        String filePath = "excelFile.xlsx";
-        logger.info("Generating Excel file locally at " + filePath);
-        String base64Content;
-
-        try (FileOutputStream fileOutputStream = new FileOutputStream(filePath);
-             BufferedOutputStream bufferedOut = new BufferedOutputStream(fileOutputStream)) {
-
-            workbook.write(bufferedOut);
-            workbook.close();
-
-            logger.info("Excel file generated locally at " + filePath);
-            logger.info("Encode file to base64...");
-
-            // Use 8KB buffer size for optimal performance
-            byte[] buffer = new byte[bytes];
-            File file = new File(filePath);
-            long fileSize = file.length();
-
-            // Pre-calculate base64 size to avoid StringBuilder resizing
-            int base64Size = (int)(fileSize * 1.4); // Base64 is roughly 4/3 of original size
-            StringBuilder base64Builder = new StringBuilder(base64Size);
-
-            try (InputStream inputStream = new BufferedInputStream(new FileInputStream(filePath))) {
-                Base64.Encoder encoder = Base64.getEncoder();
-                int bytesRead;
-
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    if (bytesRead > 0) {
-                        byte[] readData = bytesRead < buffer.length ?
-                                Arrays.copyOf(buffer, bytesRead) : buffer;
-                        base64Builder.append(encoder.encodeToString(readData));
-                    }
+    private static String encodeFileToBase64(String filePath, int bufferSize) throws IOException {
+        logger.info("Encode file to base64...");
+        File file = new File(filePath);
+        
+        // Use a more efficient buffer size
+        bufferSize = Math.max(bufferSize, CHUNK_SIZE);
+        
+        // Use ByteArrayOutputStream to build the base64 string in chunks
+        try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file), bufferSize);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            
+            Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
+            byte[] buffer = new byte[bufferSize];
+            int bytesRead;
+            long totalBytesRead = 0;
+            
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                if (bytesRead > 0) {
+                    totalBytesRead += bytesRead;
+                    byte[] readData = bytesRead < buffer.length ? 
+                        Arrays.copyOf(buffer, bytesRead) : buffer;
+                    outputStream.write(encoder.encode(readData));
                 }
             }
-            base64Content = base64Builder.toString();
+            
             logger.info("File encoded to Base64.");
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            return outputStream.toString("UTF-8");
         }
+    }
 
+    private static void deleteFile(String filePath) {
         try {
             Files.delete(new File(filePath).toPath());
             logger.info("File deleted...");
         } catch (IOException e) {
             logger.warning("Could not delete temporary file: " + filePath + ". Error: " + e.getMessage());
         }
-
-        return base64Content;
     }
 }
