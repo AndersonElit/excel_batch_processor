@@ -19,4 +19,13 @@ public class Request {
     public void setRowAccessWindows(int rowAccessWindows) {
         this.rowAccessWindows = rowAccessWindows;
     }
+
+    @Override
+    public String toString() {
+        return "Request{" +
+                "listSize=" + listSize +
+                ", rowAccessWindows=" + rowAccessWindows +
+                '}';
+    }
+
 }

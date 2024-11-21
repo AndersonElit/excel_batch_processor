@@ -14,7 +14,7 @@ public class Controller {
 
     @PostMapping("/execute")
     public String generateExcel(@RequestBody Request request) {
-        logger.info("Request: " + request);
+        logger.info("Request: " + request.toString());
         List<Object[]> data = new ObjectList().getObjectList(request.getListSize());
         return ApachePoiImpl.generateExcel(data, request.getRowAccessWindows());
     }
