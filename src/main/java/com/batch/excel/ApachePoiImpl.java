@@ -87,19 +87,12 @@ public class ApachePoiImpl {
             try (InputStream inputStream = new BufferedInputStream(new FileInputStream(filePath))) {
                 Base64.Encoder encoder = Base64.getEncoder();
                 int bytesRead;
-                int totalBytesProcessed = 0;
 
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
                     if (bytesRead > 0) {
-                        totalBytesProcessed += bytesRead;
                         byte[] readData = bytesRead < buffer.length ?
                                 Arrays.copyOf(buffer, bytesRead) : buffer;
                         base64Builder.append(encoder.encodeToString(readData));
-
-                        // Log progress for large files
-                        if (totalBytesProcessed > 1024 * 1024) { // Log every 1MB
-                            logger.info("Processed " + (totalBytesProcessed / (1024 * 1024)) + "MB");
-                        }
                     }
                 }
             }
