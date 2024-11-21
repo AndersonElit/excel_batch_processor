@@ -86,6 +86,7 @@ public class ApachePoiImpl {
                     if (bytesRead > 0) {
                         String encodedChunk = encoder.encodeToString(Arrays.copyOf(buffer, bytesRead));
                         base64Builder.append(encodedChunk);
+                        System.gc();
                     }
                 }
             }
