@@ -1,10 +1,12 @@
 package com.batch.excel;
 
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
@@ -13,10 +15,10 @@ public class ApachePoiImpl {
 
     private static final Logger logger = Logger.getLogger(ApachePoiImpl.class.getName());
 
-    public static String generateExcel(List<Object[]> data, int rowAccessWindows) {
+    public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
         logger.info("Generating Excel...");
-        Workbook workbook = new SXSSFWorkbook(rowAccessWindows);
-        Sheet sheet = workbook.createSheet("sheet 1");
+        SXSSFWorkbook workbook = new SXSSFWorkbook(rowAccessWindows);
+        SXSSFSheet sheet = workbook.createSheet("sheet 1");
 
         Font headerFont = workbook.createFont();
         headerFont.setBold(true);
@@ -49,26 +51,57 @@ public class ApachePoiImpl {
                     cell.setCellStyle(cellStyle);
                 }
             }
+
+            if (rowNum % rowAccessWindows == 0) {
+                try {
+                    sheet.flushRows(rowAccessWindows);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
         }
 
         String filePath = "excelFile.xlsx";
         logger.info("Generating Excel file locally at " + filePath);
-        try {
-            FileOutputStream fileOutputStream = new FileOutputStream(filePath);
-            workbook.write(fileOutputStream);
+        String base64Content;
+        
+        try (FileOutputStream fileOutputStream = new FileOutputStream(filePath);
+             BufferedOutputStream bufferedOut = new BufferedOutputStream(fileOutputStream)) {
+            
+            workbook.write(bufferedOut);
             workbook.close();
+            
             logger.info("Excel file generated locally at " + filePath);
             logger.info("Encode file to base64...");
-            File file = new File(filePath);
-            byte[] fileBytes = Files.readAllBytes(file.toPath());
-            String base64Encoded = Base64.getEncoder().encodeToString(fileBytes);
+
+            StringBuilder base64Builder = new StringBuilder();
+            try (InputStream inputStream = new BufferedInputStream(new FileInputStream(filePath))) {
+                Base64.Encoder encoder = Base64.getEncoder();
+                byte[] buffer = new byte[bytes];
+                int bytesRead;
+
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    if (bytesRead > 0) {
+                        String encodedChunk = encoder.encodeToString(Arrays.copyOf(buffer, bytesRead));
+                        base64Builder.append(encodedChunk);
+                    }
+                }
+            }
+            base64Content = base64Builder.toString();
             logger.info("File encoded to Base64.");
-            file.delete();
-            logger.info("File deleted.");
-            return base64Encoded;
-        }  catch (IOException e) {
+            
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
+        try {
+            Files.delete(new File(filePath).toPath());
+            logger.info("File deleted...");
+        } catch (IOException e) {
+            logger.warning("Could not delete temporary file: " + filePath + ". Error: " + e.getMessage());
+        }
+        
+        return base64Content;
     }
 }

@@ -3,6 +3,7 @@ package com.batch.excel;
 public class Request {
     private int listSize;
     private int rowAccessWindows;
+    private int bytes;
 
     public int getListSize() {
         return listSize;
@@ -20,11 +21,20 @@ public class Request {
         this.rowAccessWindows = rowAccessWindows;
     }
 
+    public int getBytes() {
+        return bytes;
+    }
+
+    public void setBytes(int bytes) {
+        this.bytes = bytes;
+    }
+
     @Override
     public String toString() {
         return "Request{" +
                 "listSize=" + listSize +
                 ", rowAccessWindows=" + rowAccessWindows +
+                ", bytes=" + bytes +
                 '}';
     }
 
