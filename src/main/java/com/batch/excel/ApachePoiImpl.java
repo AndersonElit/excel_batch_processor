@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 14");
+        logger.info("final impl of base64 buffer 15");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -126,7 +126,13 @@ public class ApachePoiImpl {
         }
 
         logger.info("Joining chunks...");
-        String base64Content = String.join("", chunks);
+        logger.info("Number of chunks: " + chunks.size());
+        List<List<String>> subLists = splitList(chunks);
+        String base64Content = "";
+        for (List<String> subList : subLists) {
+            base64Content += String.join("", subList);
+            System.gc();
+        }
 
         logger.info("Base64 encoding completed. Total length: " + base64Content.length());
         return String.valueOf(base64Content.length());
@@ -139,5 +145,28 @@ public class ApachePoiImpl {
         } catch (IOException e) {
             logger.warning("Could not delete temporary file: " + filePath + ". Error: " + e.getMessage());
         }
+    }
+
+    private static List<List<String>> splitList(List<String> chunks) {
+        List<List<String>> subLists = new ArrayList<>();
+        
+        // If the list is small, don't split it
+        if (chunks.size() <= 100) {
+            subLists.add(chunks);
+            return subLists;
+        }
+        
+        // Calculate number of sublists based on chunk size
+        int chunkSize = 100; // Process 100 chunks at a time
+        int listNumber = (int) Math.ceil((double) chunks.size() / chunkSize);
+        
+        for (int i = 0; i < listNumber; i++) {
+            int fromIndex = i * chunkSize;
+            int toIndex = Math.min((i + 1) * chunkSize, chunks.size());
+            subLists.add(new ArrayList<>(chunks.subList(fromIndex, toIndex)));
+        }
+        
+        logger.info("Split into " + subLists.size() + " sublists");
+        return subLists;
     }
 }
