@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 23");
+        logger.info("let only 20 columns");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
