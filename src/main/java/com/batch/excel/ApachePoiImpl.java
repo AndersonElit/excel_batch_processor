@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 15");
+        logger.info("final impl of base64 buffer 16");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -127,10 +127,10 @@ public class ApachePoiImpl {
 
         logger.info("Joining chunks...");
         logger.info("Number of chunks: " + chunks.size());
-        List<List<String>> subLists = splitList(chunks);
-        String base64Content = "";
-        for (List<String> subList : subLists) {
-            base64Content += String.join("", subList);
+        List<String> subStrings = getSubStrings(chunks);
+        StringBuilder base64Content = new StringBuilder();
+        for (String string : subStrings) {
+            base64Content.append(String.join("", string));
             System.gc();
         }
 
@@ -147,14 +147,14 @@ public class ApachePoiImpl {
         }
     }
 
-    private static List<List<String>> splitList(List<String> chunks) {
-        List<List<String>> subLists = new ArrayList<>();
+    private static List<String> getSubStrings(List<String> chunks) {
         
         // If the list is small, don't split it
         if (chunks.size() <= 100) {
-            subLists.add(chunks);
-            return subLists;
+            return chunks;
         }
+
+        List<String> strings = new ArrayList<>();
         
         // Calculate number of sublists based on chunk size
         int chunkSize = 100; // Process 100 chunks at a time
@@ -163,10 +163,13 @@ public class ApachePoiImpl {
         for (int i = 0; i < listNumber; i++) {
             int fromIndex = i * chunkSize;
             int toIndex = Math.min((i + 1) * chunkSize, chunks.size());
-            subLists.add(new ArrayList<>(chunks.subList(fromIndex, toIndex)));
+            List<String> subList = chunks.subList(fromIndex, toIndex);
+            String subString = String.join("", subList);
+            strings.add(subString);
+            System.gc();
         }
         
-        logger.info("Split into " + subLists.size() + " sublists");
-        return subLists;
+        logger.info("Split into " + strings.size() + " sublists");
+        return strings;
     }
 }
