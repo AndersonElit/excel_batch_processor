@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 18");
+        logger.info("final impl of base64 buffer 19");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -151,7 +151,7 @@ public class ApachePoiImpl {
     private static List<String> getSubStrings(List<String> chunks) {
 
         // Calculate number of sublists based on chunk size
-        int chunkSize = 100;
+        int chunkSize = 1000;
 
         // If the list is small, don't split it
         if (chunks.size() <= chunkSize) {
