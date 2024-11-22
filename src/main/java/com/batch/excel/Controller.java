@@ -20,7 +20,7 @@ public class Controller {
             logger.info("Request: " + request.toString());
             List<Object[]> data = new ObjectList().getObjectList(request.getListSize());
             String base64Content = ApachePoiImpl.generateExcel(data, request.getRowAccessWindows(), request.getBytes());
-            return ResponseEntity.ok(base64Content);
+            return ResponseEntity.ok("longitud base64: " + base64Content.length());
         } catch (Exception e) {
             logger.severe("Error generating Excel: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
