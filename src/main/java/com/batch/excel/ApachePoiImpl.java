@@ -151,7 +151,7 @@ public class ApachePoiImpl {
     private static List<String> getSubStrings(List<String> chunks) {
 
         // Calculate number of sublists based on chunk size
-        int chunkSize = 1000;
+        int chunkSize = 10000;
 
         // If the list is small, don't split it
         if (chunks.size() <= chunkSize) {
