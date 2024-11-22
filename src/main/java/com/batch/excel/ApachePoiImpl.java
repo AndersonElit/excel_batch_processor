@@ -90,45 +90,31 @@ public class ApachePoiImpl {
         logger.info("Encode file to base64...");
         File file = new File(filePath);
         
-        // Use efficient buffer sizes
-        bufferSize = Math.max(bufferSize, CHUNK_SIZE);
-        byte[] buffer = new byte[bufferSize];
+        // Use a fixed buffer size of 8KB for optimal performance
+        int actualBufferSize = CHUNK_SIZE;
+        byte[] buffer = new byte[actualBufferSize];
         
-        // Calculate chunks to process file in parts
-        int maxChunkSize = 1024 * 1024; // 1MB chunks for Base64 string
-        StringBuilder result = new StringBuilder();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
         
-        try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file), bufferSize)) {
-            Base64.Encoder encoder = Base64.getEncoder();
+        try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file), actualBufferSize)) {
             int bytesRead;
-            int currentChunkSize = 0;
-            byte[] accumulator = new byte[maxChunkSize];
-            int accumulatorPos = 0;
+            byte[] encodedBytes;
             
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 if (bytesRead > 0) {
-                    // Copy to accumulator
-                    System.arraycopy(buffer, 0, accumulator, accumulatorPos, bytesRead);
-                    accumulatorPos += bytesRead;
-                    currentChunkSize += bytesRead;
-                    
-                    // When chunk is full, encode and append
-                    if (currentChunkSize >= maxChunkSize) {
-                        result.append(encoder.encodeToString(Arrays.copyOf(accumulator, accumulatorPos)));
-                        accumulatorPos = 0;
-                        currentChunkSize = 0;
-                    }
+                    // Only encode the actual bytes read
+                    encodedBytes = encoder.encode(Arrays.copyOf(buffer, bytesRead));
+                    outputStream.write(encodedBytes);
                 }
-            }
-            
-            // Encode any remaining bytes
-            if (accumulatorPos > 0) {
-                result.append(encoder.encodeToString(Arrays.copyOf(accumulator, accumulatorPos)));
             }
         }
         
-        logger.info("File encoded to Base64.");
-        return result.toString();
+        String result = outputStream.toString();
+        outputStream.close();
+        
+        logger.info("File encoded to Base64");
+        return result;
     }
 
     private static void deleteFile(String filePath) {
