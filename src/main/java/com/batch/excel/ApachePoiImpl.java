@@ -17,7 +17,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 8");
+        logger.info("final impl of base64 buffer 9");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -95,7 +95,7 @@ public class ApachePoiImpl {
         int actualBufferSize = CHUNK_SIZE;
         byte[] buffer = new byte[actualBufferSize];
         
-        StringBuilder base64Content = new StringBuilder();
+        String base64Content = "";
         Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
         
         try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file), actualBufferSize)) {
@@ -106,13 +106,13 @@ public class ApachePoiImpl {
                 if (bytesRead > 0) {
                     // Only encode the actual bytes read
                     encodedBytes = encoder.encode(Arrays.copyOf(buffer, bytesRead));
-                    base64Content.append(new String(encodedBytes));
+                    base64Content += new String(encodedBytes);
                 }
             }
         }
 
-        logger.info("Base64 encoding completed. Total length: " + base64Content.toString().length());
-        return String.valueOf(base64Content.toString().length());
+        logger.info("Base64 encoding completed. Total length: " + base64Content.length());
+        return String.valueOf(base64Content.length());
     }
 
     private static void deleteFile(String filePath) {
