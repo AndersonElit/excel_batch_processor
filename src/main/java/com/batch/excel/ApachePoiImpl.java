@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 21");
+        logger.info("final impl of base64 buffer 22");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -129,29 +129,53 @@ public class ApachePoiImpl {
         logger.info("Number of chunks: " + chunks.size());
         List<String> subStrings = getSubStrings(chunks, bufferSize);
         
-        // Calculate total capacity first
-        long totalCapacity = 0;
+        // Calculate total length first
+        long totalLength = 0;
         for (String str : subStrings) {
-            totalCapacity += str.length();
+            totalLength += str.length();
         }
-        logger.info("Total capacity needed: " + totalCapacity);
+        logger.info("Total length will be: " + totalLength);
         
-        // Use StringBuilder with pre-calculated capacity
-        StringBuilder base64Builder = new StringBuilder((int)totalCapacity);
+        // Process in smaller chunks (10MB each)
+        final int MAX_CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
+        StringBuilder currentChunk = new StringBuilder(MAX_CHUNK_SIZE);
+        String base64Content = "";
+        long processedLength = 0;
+        
         for (String str : subStrings) {
-            base64Builder.append(str);
-            System.gc();
+            if (currentChunk.length() + str.length() > MAX_CHUNK_SIZE) {
+                // Current chunk is full, append it to result and clear
+                if (base64Content.isEmpty()) {
+                    base64Content = currentChunk.toString();
+                } else {
+                    base64Content = base64Content.concat(currentChunk.toString());
+                }
+                processedLength += currentChunk.length();
+                logger.info("Processed " + processedLength + " out of " + totalLength + " characters");
+                currentChunk.setLength(0);
+                System.gc();
+            }
+            currentChunk.append(str);
         }
         
-        String base64Content = base64Builder.toString();
-        base64Builder.setLength(0);  // Clear StringBuilder
-        base64Builder = null;  // Help GC
-        subStrings.clear();   // Clear the substrings list
+        // Handle the last chunk
+        if (currentChunk.length() > 0) {
+            if (base64Content.isEmpty()) {
+                base64Content = currentChunk.toString();
+            } else {
+                base64Content = base64Content.concat(currentChunk.toString());
+            }
+            processedLength += currentChunk.length();
+            logger.info("Processed " + processedLength + " out of " + totalLength + " characters");
+        }
+        
+        currentChunk.setLength(0);
+        currentChunk = null;
+        subStrings.clear();
         System.gc();
 
         logger.info("Base64 encoding completed. Total length: " + base64Content.length());
         return String.valueOf(base64Content.length());
-
     }
 
     private static void deleteFile(String filePath) {
