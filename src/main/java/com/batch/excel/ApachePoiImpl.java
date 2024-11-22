@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 13");
+        logger.info("final impl of base64 buffer 14");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -96,11 +96,10 @@ public class ApachePoiImpl {
         int actualBufferSize = CHUNK_SIZE;
         byte[] buffer = new byte[actualBufferSize];
         Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
-        
+
         // Store chunks in a list to avoid large string concatenation
         List<String> chunks = new ArrayList<>();
         long processedBytes = 0;
-        int totalLength = 0;
         
         try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file), actualBufferSize)) {
             int bytesRead;
@@ -112,24 +111,22 @@ public class ApachePoiImpl {
                     encodedBytes = encoder.encode(Arrays.copyOf(buffer, bytesRead));
                     String chunk = new String(encodedBytes);
                     chunks.add(chunk);
-                    totalLength += chunk.length();
                     
                     processedBytes += bytesRead;
                     if (processedBytes % (10 * 1024 * 1024) == 0) { // Log every 10MB
                         logger.info(String.format("Processed %d MB...", processedBytes / (1024 * 1024)));
                     }
+                    
+                    // Force garbage collection of unused chunks periodically
+                    if (processedBytes % (10 * 1024 * 1024) == 0) { // Every 10MB
+                        System.gc();
+                    }
                 }
             }
         }
-        
-        logger.info("Joining chunks...");
-        //String base64Content = String.join("", chunks);
-        
-        String base64Content = "";
 
-        for (String chunk : chunks) {
-            base64Content += chunk;
-        }
+        logger.info("Joining chunks...");
+        String base64Content = String.join("", chunks);
 
         logger.info("Base64 encoding completed. Total length: " + base64Content.length());
         return String.valueOf(base64Content.length());
