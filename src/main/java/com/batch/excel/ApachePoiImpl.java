@@ -135,9 +135,8 @@ public class ApachePoiImpl {
             totalLength += str.length();
         }
         logger.info("Total length will be: " + totalLength);
-        
-        // Process in smaller chunks (10MB each)
-        final int MAX_CHUNK_SIZE = 1 * 1024 * 1024; // 10MB
+
+        final int MAX_CHUNK_SIZE = 1 * 1024 * 1024;
         StringBuilder currentChunk = new StringBuilder(MAX_CHUNK_SIZE);
         String base64Content = "";
         long processedLength = 0;
