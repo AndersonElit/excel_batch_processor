@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 20");
+        logger.info("final impl of base64 buffer 21");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -127,12 +127,27 @@ public class ApachePoiImpl {
 
         logger.info("Joining chunks...");
         logger.info("Number of chunks: " + chunks.size());
-        List<String> subStrings = getSubStrings(chunks);
-        String base64Content = "";
-        for (String string : subStrings) {
-            base64Content += string;
+        List<String> subStrings = getSubStrings(chunks, bufferSize);
+        
+        // Calculate total capacity first
+        long totalCapacity = 0;
+        for (String str : subStrings) {
+            totalCapacity += str.length();
+        }
+        logger.info("Total capacity needed: " + totalCapacity);
+        
+        // Use StringBuilder with pre-calculated capacity
+        StringBuilder base64Builder = new StringBuilder((int)totalCapacity);
+        for (String str : subStrings) {
+            base64Builder.append(str);
             System.gc();
         }
+        
+        String base64Content = base64Builder.toString();
+        base64Builder.setLength(0);  // Clear StringBuilder
+        base64Builder = null;  // Help GC
+        subStrings.clear();   // Clear the substrings list
+        System.gc();
 
         logger.info("Base64 encoding completed. Total length: " + base64Content.length());
         return String.valueOf(base64Content.length());
@@ -148,10 +163,7 @@ public class ApachePoiImpl {
         }
     }
 
-    private static List<String> getSubStrings(List<String> chunks) {
-
-        // Calculate number of sublists based on chunk size
-        int chunkSize = 10000;
+    private static List<String> getSubStrings(List<String> chunks, int chunkSize) {
 
         // If the list is small, don't split it
         if (chunks.size() <= chunkSize) {
