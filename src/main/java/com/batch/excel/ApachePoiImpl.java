@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 17");
+        logger.info("final impl of base64 buffer 18");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -128,15 +128,15 @@ public class ApachePoiImpl {
         logger.info("Joining chunks...");
         logger.info("Number of chunks: " + chunks.size());
         List<String> subStrings = getSubStrings(chunks);
-        StringBuilder base64Content = new StringBuilder();
+        String base64Content = "";
         for (String string : subStrings) {
-            base64Content.append(string);
+            base64Content += string;
             System.gc();
         }
 
-        String base64String = base64Content.toString();
-        logger.info("Base64 encoding completed. Total length: " + base64String.length());
-        return String.valueOf(base64String.length());
+        logger.info("Base64 encoding completed. Total length: " + base64Content.length());
+        return String.valueOf(base64Content.length());
+
     }
 
     private static void deleteFile(String filePath) {
@@ -149,16 +149,17 @@ public class ApachePoiImpl {
     }
 
     private static List<String> getSubStrings(List<String> chunks) {
-        
+
+        // Calculate number of sublists based on chunk size
+        int chunkSize = 100;
+
         // If the list is small, don't split it
-        if (chunks.size() <= 100) {
+        if (chunks.size() <= chunkSize) {
             return chunks;
         }
 
         List<String> strings = new ArrayList<>();
-        
-        // Calculate number of sublists based on chunk size
-        int chunkSize = 100; // Process 100 chunks at a time
+        // Process 100 chunks at a time
         int listNumber = (int) Math.ceil((double) chunks.size() / chunkSize);
         
         for (int i = 0; i < listNumber; i++) {
