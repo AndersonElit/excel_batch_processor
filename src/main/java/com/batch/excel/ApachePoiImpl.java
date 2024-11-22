@@ -6,6 +6,7 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -17,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 11");
+        logger.info("final impl of base64 buffer 12");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -91,40 +92,38 @@ public class ApachePoiImpl {
         logger.info("Encode file to base64...");
         File file = new File(filePath);
         
-        // Calculate approximate base64 length based on file size
-        long fileSize = file.length();
-        int base64Length = (int) (fileSize * 4/3) + 4; // Base64 is ~4/3 larger than binary
-        
-        // Pre-allocate array for better performance
-        char[] base64Chars = new char[base64Length];
-        int position = 0;
-        
         // Use a fixed buffer size of 8KB for optimal performance
         int actualBufferSize = CHUNK_SIZE;
         byte[] buffer = new byte[actualBufferSize];
         Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
         
+        // Store chunks in a list to avoid large string concatenation
+        List<String> chunks = new ArrayList<>();
+        long processedBytes = 0;
+        int totalLength = 0;
+        
         try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file), actualBufferSize)) {
             int bytesRead;
             byte[] encodedBytes;
-            char[] tempChars;
             
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 if (bytesRead > 0) {
                     // Only encode the actual bytes read
                     encodedBytes = encoder.encode(Arrays.copyOf(buffer, bytesRead));
-                    tempChars = new String(encodedBytes).toCharArray();
+                    String chunk = new String(encodedBytes);
+                    chunks.add(chunk);
+                    totalLength += chunk.length();
                     
-                    // Copy to pre-allocated array
-                    System.arraycopy(tempChars, 0, base64Chars, position, tempChars.length);
-                    position += tempChars.length;
+                    processedBytes += bytesRead;
+                    if (processedBytes % (10 * 1024 * 1024) == 0) { // Log every 10MB
+                        logger.info(String.format("Processed %d MB...", processedBytes / (1024 * 1024)));
+                    }
                 }
             }
         }
-
-        logger.info("generate base64Content from chars: " + base64Chars.length);
-        // Create final string only once, using exact length
-        String base64Content = new String(base64Chars, 0, position);
+        
+        logger.info("Joining chunks...");
+        String base64Content = String.join("", chunks);
         logger.info("Base64 encoding completed. Total length: " + base64Content.length());
         return String.valueOf(base64Content.length());
     }
