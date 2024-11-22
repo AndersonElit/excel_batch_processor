@@ -18,7 +18,7 @@ public class ApachePoiImpl {
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
-        logger.info("final impl of base64 buffer 16");
+        logger.info("final impl of base64 buffer 17");
         logger.info("Generating Excel...");
         String filePath = "excelFile.xlsx";
         
@@ -130,12 +130,13 @@ public class ApachePoiImpl {
         List<String> subStrings = getSubStrings(chunks);
         StringBuilder base64Content = new StringBuilder();
         for (String string : subStrings) {
-            base64Content.append(String.join("", string));
+            base64Content.append(string);
             System.gc();
         }
 
-        logger.info("Base64 encoding completed. Total length: " + base64Content.length());
-        return String.valueOf(base64Content.length());
+        String base64String = base64Content.toString();
+        logger.info("Base64 encoding completed. Total length: " + base64String.length());
+        return String.valueOf(base64String.length());
     }
 
     private static void deleteFile(String filePath) {
