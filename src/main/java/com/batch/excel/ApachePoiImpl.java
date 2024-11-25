@@ -18,6 +18,7 @@ public class ApachePoiImpl {
 
     private static final Logger logger = Logger.getLogger(ApachePoiImpl.class.getName());
     private static final int CHUNK_SIZE = 8192; // 8KB chunks for reading
+    private static final int DEFAULT_BATCH_SIZE = 1000;  // Default batch size for processing
 
     public static String generateExcel(List<Object[]> data, int rowAccessWindows, int bytes) {
         logger.info("let only 20 columns");
@@ -88,20 +89,53 @@ public class ApachePoiImpl {
     private static void writeDataToSheet(SXSSFSheet sheet, List<Object[]> data, int rowAccessWindows,
                                        CellStyle headerStyle, CellStyle cellStyle) throws IOException {
         int rowNum = 0;
-        for (Object[] rowData : data) {
+        int totalRows = data.size();
+        int batchSize = DEFAULT_BATCH_SIZE;
+        int processedRows = 0;
+        
+        // Process header row separately
+        if (!data.isEmpty()) {
+            Object[] headerData = data.get(0);
+            Row headerRow = sheet.createRow(rowNum++);
+            for (int colNum = 0; colNum < headerData.length; colNum++) {
+                Cell cell = headerRow.createCell(colNum);
+                cell.setCellValue(headerData[colNum].toString());
+                cell.setCellStyle(headerStyle);
+            }
+            processedRows++;
+        }
+
+        // Process data in batches
+        for (int i = 1; i < totalRows; i++) {
+            Object[] rowData = data.get(i);
             Row row = sheet.createRow(rowNum++);
-            boolean isHeaderRow = rowNum == 1;
             
             for (int colNum = 0; colNum < rowData.length; colNum++) {
                 Cell cell = row.createCell(colNum);
                 cell.setCellValue(rowData[colNum].toString());
-                cell.setCellStyle(isHeaderRow ? headerStyle : cellStyle);
+                cell.setCellStyle(cellStyle);
             }
-
-            if (rowNum % rowAccessWindows == 0) {
+            
+            processedRows++;
+            
+            // Flush when reaching batch size or row access window
+            if (processedRows % batchSize == 0 || processedRows % rowAccessWindows == 0) {
                 sheet.flushRows(rowAccessWindows);
+                logger.info(String.format("Processed %d/%d rows (%.2f%%)", 
+                    processedRows, totalRows, (processedRows * 100.0) / totalRows));
+                    
+                // Request garbage collection after processing each batch
+                System.gc();
+                logger.info("Requested garbage collection after batch processing");
             }
         }
+        
+        // Final flush for any remaining rows
+        if (processedRows % rowAccessWindows != 0) {
+            sheet.flushRows(rowAccessWindows);
+        }
+        
+        logger.info("Completed processing all " + processedRows + " rows");
     }
 
     private static String encodeFileToBase64(String filePath, int bufferSize) {
