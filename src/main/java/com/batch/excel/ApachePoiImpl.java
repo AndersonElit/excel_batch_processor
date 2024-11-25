@@ -6,6 +6,8 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -24,11 +26,25 @@ public class ApachePoiImpl {
         
         try (SXSSFWorkbook workbook = new SXSSFWorkbook(rowAccessWindows)) {
             createExcelFile(workbook, data, rowAccessWindows, filePath);
-            return encodeFileToBase64(filePath, bytes);
+            logger.info("Excel file generated locally at " + filePath);
+            
+            // Get base64 content
+            String base64Content = encodeFileToBase64(filePath, bytes);
+            
+            // Verify the file was properly encoded
+            logger.info("Verifying base64 content...");
+            if (base64Content == null || base64Content.isEmpty()) {
+                throw new RuntimeException("Base64 encoding failed - content is empty");
+            }
+            
+            return base64Content;
+            
         } catch (Exception e) {
-            throw new RuntimeException("Error generating Excel: " + e.getMessage(), e);
+            logger.severe("Error in Excel generation: " + e.getMessage());
+            throw new RuntimeException("Failed to generate Excel: " + e.getMessage());
         } finally {
             deleteFile(filePath);
+            logger.info("File deleted...");
         }
     }
 
@@ -88,93 +104,24 @@ public class ApachePoiImpl {
         }
     }
 
-    private static String encodeFileToBase64(String filePath, int bufferSize) throws IOException {
+    private static String encodeFileToBase64(String filePath, int bufferSize) {
         logger.info("Encode file to base64...");
-        File file = new File(filePath);
         
-        // Use a fixed buffer size of 8KB for optimal performance
-        int actualBufferSize = CHUNK_SIZE;
-        byte[] buffer = new byte[actualBufferSize];
-        Base64.Encoder encoder = Base64.getEncoder().withoutPadding();
-
-        // Store chunks in a list to avoid large string concatenation
-        List<String> chunks = new ArrayList<>();
-        long processedBytes = 0;
-        
-        try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file), actualBufferSize)) {
-            int bytesRead;
-            byte[] encodedBytes;
+        try {
+            // Read the entire file into a byte array
+            Path path = Paths.get(filePath);
+            byte[] fileContent = Files.readAllBytes(path);
             
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                if (bytesRead > 0) {
-                    // Only encode the actual bytes read
-                    encodedBytes = encoder.encode(Arrays.copyOf(buffer, bytesRead));
-                    String chunk = new String(encodedBytes);
-                    chunks.add(chunk);
-                    
-                    processedBytes += bytesRead;
-                    if (processedBytes % (10 * 1024 * 1024) == 0) { // Log every 10MB
-                        logger.info(String.format("Processed %d MB...", processedBytes / (1024 * 1024)));
-                    }
-                    
-                    // Force garbage collection of unused chunks periodically
-                    if (processedBytes % (10 * 1024 * 1024) == 0) { // Every 10MB
-                        System.gc();
-                    }
-                }
-            }
+            // Encode the entire file at once to ensure proper padding
+            String base64Content = Base64.getEncoder().encodeToString(fileContent);
+            
+            logger.info("Base64 encoding completed. Total length: " + base64Content.length());
+            return base64Content;
+            
+        } catch (IOException e) {
+            logger.severe("Error reading file for base64 encoding: " + e.getMessage());
+            throw new RuntimeException("Failed to read file for base64 encoding", e);
         }
-
-        logger.info("Joining chunks...");
-        logger.info("Number of chunks: " + chunks.size());
-        List<String> subStrings = getSubStrings(chunks, bufferSize);
-        
-        // Calculate total length first
-        long totalLength = 0;
-        for (String str : subStrings) {
-            totalLength += str.length();
-        }
-        logger.info("Total length will be: " + totalLength);
-
-        final int MAX_CHUNK_SIZE = 1 * 1024 * 1024;
-        StringBuilder currentChunk = new StringBuilder(MAX_CHUNK_SIZE);
-        String base64Content = "";
-        long processedLength = 0;
-        
-        for (String str : subStrings) {
-            if (currentChunk.length() + str.length() > MAX_CHUNK_SIZE) {
-                // Current chunk is full, append it to result and clear
-                if (base64Content.isEmpty()) {
-                    base64Content = currentChunk.toString();
-                } else {
-                    base64Content = base64Content.concat(currentChunk.toString());
-                }
-                processedLength += currentChunk.length();
-                logger.info("Processed " + processedLength + " out of " + totalLength + " characters");
-                currentChunk.setLength(0);
-                System.gc();
-            }
-            currentChunk.append(str);
-        }
-        
-        // Handle the last chunk
-        if (currentChunk.length() > 0) {
-            if (base64Content.isEmpty()) {
-                base64Content = currentChunk.toString();
-            } else {
-                base64Content = base64Content.concat(currentChunk.toString());
-            }
-            processedLength += currentChunk.length();
-            logger.info("Processed " + processedLength + " out of " + totalLength + " characters");
-        }
-        
-        currentChunk.setLength(0);
-        currentChunk = null;
-        subStrings.clear();
-        System.gc();
-
-        logger.info("Base64 encoding completed. Total length: " + base64Content.length());
-        return String.valueOf(base64Content.length());
     }
 
     private static void deleteFile(String filePath) {
@@ -184,29 +131,5 @@ public class ApachePoiImpl {
         } catch (IOException e) {
             logger.warning("Could not delete temporary file: " + filePath + ". Error: " + e.getMessage());
         }
-    }
-
-    private static List<String> getSubStrings(List<String> chunks, int chunkSize) {
-
-        // If the list is small, don't split it
-        if (chunks.size() <= chunkSize) {
-            return chunks;
-        }
-
-        List<String> strings = new ArrayList<>();
-        // Process 100 chunks at a time
-        int listNumber = (int) Math.ceil((double) chunks.size() / chunkSize);
-        
-        for (int i = 0; i < listNumber; i++) {
-            int fromIndex = i * chunkSize;
-            int toIndex = Math.min((i + 1) * chunkSize, chunks.size());
-            List<String> subList = chunks.subList(fromIndex, toIndex);
-            String subString = String.join("", subList);
-            strings.add(subString);
-            System.gc();
-        }
-        
-        logger.info("Split into " + strings.size() + " sublists");
-        return strings;
     }
 }
